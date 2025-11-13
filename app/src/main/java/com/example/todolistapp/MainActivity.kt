@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -28,9 +30,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,14 +42,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.todolistapp.ui.theme.ToDoListAppTheme
 import kotlinx.coroutines.launch
-import kotlin.text.get
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +64,8 @@ fun ToDoListApp() {
     val toDoManager = ToDoManager()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var showAlert by remember { mutableStateOf(false) }
+    var savedIndex by remember { mutableIntStateOf(-1) }
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -72,7 +76,55 @@ fun ToDoListApp() {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-        ) {
+        ){
+            if (showAlert){
+                AlertDialog(
+                    onDismissRequest = {
+
+                    },
+                    title = {
+                        Text(text = "Confirmation")
+                    },
+                    text = {
+                        Text(text = "Are you sure you want to delete?")
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val removed = toDoManager.getTasks()[savedIndex]
+                                toDoManager.removeTask(savedIndex)
+                                scope.launch {
+                                    val result: SnackbarResult = snackbarHostState.showSnackbar(
+                                        message = "Task Completed",
+                                        actionLabel = "Undo",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    when (result){
+                                        SnackbarResult.ActionPerformed ->{
+                                            toDoManager.addTask(removed, savedIndex)
+                                        }
+                                        SnackbarResult.Dismissed ->{
+
+                                        }
+                                    }
+                                }
+                                showAlert = false
+                            }
+                        ) {
+                            Text(text = "Confirm")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showAlert = false
+                            }
+                        ) {
+                            Text(text = "Dismiss")
+                        }
+                    }
+                )
+            }
             Column {
                 Row(
                     modifier = Modifier
@@ -107,6 +159,16 @@ fun ToDoListApp() {
                             text = "Add"
                         )
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    FilledIconButton(
+                        onClick = {
+
+                        }
+                    ) {
+//                        Icon(
+//                            painter = painterResource()
+//                        )
+                    }
                 }
                 if (toDoManager.getTasks().isEmpty()){
                     Column(
@@ -129,23 +191,8 @@ fun ToDoListApp() {
                         items(toDoManager.getTasks().size){index ->
                             TextRow(toDoManager.getTasks()[index], modifier = Modifier.clickable(
                                 onClick = {
-                                    val removed = toDoManager.getTasks()[index]
-                                    toDoManager.removeTask(index)
-                                    scope.launch {
-                                        val result: SnackbarResult = snackbarHostState.showSnackbar(
-                                            message = "Task Completed",
-                                            actionLabel = "Undo",
-                                            duration = SnackbarDuration.Short
-                                        )
-                                        when (result){
-                                            SnackbarResult.ActionPerformed ->{
-                                                toDoManager.addTask(removed, index)
-                                            }
-                                            SnackbarResult.Dismissed ->{
-
-                                            }
-                                        }
-                                    }
+                                    showAlert = true
+                                    savedIndex = index
                                 }
                             ))
                         }
