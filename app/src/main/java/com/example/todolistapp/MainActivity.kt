@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -47,6 +51,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +71,7 @@ fun ToDoListApp() {
     val scope = rememberCoroutineScope()
     var showAlert by remember { mutableStateOf(false) }
     var savedIndex by remember { mutableIntStateOf(-1) }
+    var listViewEnabled by remember { mutableStateOf(true) }
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -91,23 +97,7 @@ fun ToDoListApp() {
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                val removed = toDoManager.getTasks()[savedIndex]
-                                toDoManager.removeTask(savedIndex)
-                                scope.launch {
-                                    val result: SnackbarResult = snackbarHostState.showSnackbar(
-                                        message = "Task Completed",
-                                        actionLabel = "Undo",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    when (result){
-                                        SnackbarResult.ActionPerformed ->{
-                                            toDoManager.addTask(removed, savedIndex)
-                                        }
-                                        SnackbarResult.Dismissed ->{
-
-                                        }
-                                    }
-                                }
+                                taskClicked(scope, toDoManager, savedIndex, snackbarHostState)
                                 showAlert = false
                             }
                         ) {
@@ -162,12 +152,13 @@ fun ToDoListApp() {
                     Spacer(modifier = Modifier.width(16.dp))
                     FilledIconButton(
                         onClick = {
-
+                            listViewEnabled = !listViewEnabled
                         }
                     ) {
-//                        Icon(
-//                            painter = painterResource()
-//                        )
+                        Icon(
+                            painter = if (listViewEnabled) painterResource(R.drawable.outline_view_list_24) else painterResource(R.drawable.outline_grid_view_24),
+                            contentDescription = "list view"
+                        )
                     }
                 }
                 if (toDoManager.getTasks().isEmpty()){
@@ -184,17 +175,35 @@ fun ToDoListApp() {
                         )
                     }
                 }else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(all = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(toDoManager.getTasks().size){index ->
-                            TextRow(toDoManager.getTasks()[index], modifier = Modifier.clickable(
-                                onClick = {
-                                    showAlert = true
-                                    savedIndex = index
-                                }
-                            ))
+                    if (listViewEnabled){
+                        LazyColumn(
+                            contentPadding = PaddingValues(all = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(toDoManager.getTasks().size){index ->
+                                TextRow(toDoManager.getTasks()[index], modifier = Modifier.clickable(
+                                    onClick = {
+                                        showAlert = true
+                                        savedIndex = index
+                                    }
+                                ))
+                            }
+                        }
+                    }else {
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(2),
+                            contentPadding = PaddingValues(all = 16.dp),
+                            verticalItemSpacing = 16.dp,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(toDoManager.getTasks().size){index ->
+                                TextRow(toDoManager.getTasks()[index], modifier = Modifier.clickable(
+                                    onClick = {
+                                        showAlert = true
+                                        savedIndex = index
+                                    }
+                                ))
+                            }
                         }
                     }
                 }
@@ -220,5 +229,31 @@ fun TextRow(taskText: String, modifier: Modifier){
             fontSize = 28.sp,
             modifier = Modifier.padding(8.dp)
         )
+    }
+}
+
+fun taskClicked(
+    scope: CoroutineScope,
+    toDoManager: ToDoManager,
+    index: Int,
+    snackbarHostState: SnackbarHostState
+){
+    val removed = toDoManager.getTasks()[index]
+    toDoManager.removeTask(index)
+    scope.launch {
+        snackbarHostState.currentSnackbarData?.dismiss()
+        val result: SnackbarResult = snackbarHostState.showSnackbar(
+            message = "Task Completed",
+            actionLabel = "Undo",
+            duration = SnackbarDuration.Short
+        )
+        when (result){
+            SnackbarResult.ActionPerformed ->{
+                toDoManager.addTask(removed, index)
+            }
+            SnackbarResult.Dismissed ->{
+
+            }
+        }
     }
 }
