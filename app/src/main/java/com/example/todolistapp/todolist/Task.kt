@@ -1,4 +1,4 @@
-package com.example.todolistapp
+package com.example.todolistapp.todolist
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
