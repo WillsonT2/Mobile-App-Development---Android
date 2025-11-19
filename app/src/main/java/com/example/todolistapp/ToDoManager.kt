@@ -3,15 +3,17 @@ package com.example.todolistapp
 import androidx.compose.runtime.mutableStateListOf
 
 class ToDoManager {
-    private val toDoTasks: MutableList<String> = mutableStateListOf()
+    private val toDoTasks: MutableList<Task> = mutableStateListOf(
+
+    )
 
 
-    fun getTasks(): List<String>{
+    fun getTasks(): List<Task>{
         return toDoTasks.toList()
     }
 
-    fun addTask(str: String, index: Int){
-        toDoTasks.add(index, str)
+    fun addTask(task: Task, index: Int){
+        toDoTasks.add(index, task)
     }
 
     fun removeTask(index: Int){

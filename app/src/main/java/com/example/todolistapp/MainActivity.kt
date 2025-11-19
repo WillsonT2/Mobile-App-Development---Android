@@ -1,11 +1,14 @@
 package com.example.todolistapp
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +69,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ToDoListApp() {
     val toDoManager = ToDoManager()
@@ -141,7 +147,8 @@ fun ToDoListApp() {
                     Spacer(modifier = Modifier.width(16.dp))
                     Button(
                         onClick = {
-                            toDoManager.addTask(enteredText, 0)
+                            val newTask = Task(enteredText, false)
+                            toDoManager.addTask(newTask, 0)
                             enteredText = ""
                         }
                     ) {
@@ -175,16 +182,22 @@ fun ToDoListApp() {
                         )
                     }
                 }else {
+                    val haptics = LocalHapticFeedback.current
                     if (listViewEnabled){
                         LazyColumn(
                             contentPadding = PaddingValues(all = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(toDoManager.getTasks().size){index ->
-                                TextRow(toDoManager.getTasks()[index], modifier = Modifier.clickable(
+                                TaskRow(toDoManager.getTasks()[index], modifier = Modifier.combinedClickable(
                                     onClick = {
                                         showAlert = true
                                         savedIndex = index
+                                    },
+                                    onLongClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        taskLongClicked(toDoManager, index)
+
                                     }
                                 ))
                             }
@@ -197,10 +210,14 @@ fun ToDoListApp() {
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(toDoManager.getTasks().size){index ->
-                                TextRow(toDoManager.getTasks()[index], modifier = Modifier.clickable(
+                                TaskRow(toDoManager.getTasks()[index], modifier = Modifier.combinedClickable(
                                     onClick = {
                                         showAlert = true
                                         savedIndex = index
+                                    },
+                                    onLongClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        taskLongClicked(toDoManager, index)
                                     }
                                 ))
                             }
@@ -213,10 +230,10 @@ fun ToDoListApp() {
 }
 
 @Composable
-fun TextRow(taskText: String, modifier: Modifier){
+fun TaskRow(task: Task, modifier: Modifier){
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = Color(230, 160, 70),
+            containerColor = if (task.observableIsPriority) Color.Red else Color(230, 160, 70),
             contentColor = Color.White
         ),
         elevation = CardDefaults.cardElevation(
@@ -225,7 +242,7 @@ fun TextRow(taskText: String, modifier: Modifier){
         modifier = modifier
     ) {
         Text(
-            text = taskText,
+            text = task.taskName,
             fontSize = 28.sp,
             modifier = Modifier.padding(8.dp)
         )
@@ -256,4 +273,10 @@ fun taskClicked(
             }
         }
     }
+}
+
+fun taskLongClicked(toDoManager: ToDoManager, index: Int){
+    val selectedTask = toDoManager.getTasks()[index]
+    selectedTask.togglePriority()
+    Log.i("MainActivity", "ASKFLJQOGFJQP")
 }
